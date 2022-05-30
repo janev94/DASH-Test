@@ -59,7 +59,6 @@ def _calculate_bdp(bw, RTT):
 
 def changeLinkBw(ep1, ep2, in_bw, RTT, logger, out_bw=-1, loss=None):
 
-<<<<<<< HEAD
     msg = 'changing BW %s RTT %s loss %s %s ' % (in_bw, RTT, loss, datetime.datetime.now().strftime(precise_time_str))
     print(msg)
     logger.append(msg)
@@ -75,31 +74,6 @@ def changeLinkBw(ep1, ep2, in_bw, RTT, logger, out_bw=-1, loss=None):
     link[0][0].config(**link_prop)
     link[0][1].config(**{'bw': out_bw if out_bw != -1 else in_bw, 'max_queue_size': bdp if out_bw == -1 else _calculate_bdp(out_bw, RTT), 'delay': '%sms' % (RTT / 2)})
 
-=======
-	msg = 'changing BW %s RTT %s loss %s %s ' % (in_bw, RTT, loss, datetime.datetime.now().strftime(precise_time_str))
-	print(msg)
-	logger.append(msg)
-	link = ep1.connectionsTo(ep2)
-	bdp = _calculate_bdp(in_bw, RTT)
-	link_prop = {'bw': in_bw, 'max_queue_size': bdp, 'delay': '%sms' % (RTT / 2)}
-	if loss:
-		link_prop['loss'] = loss
-	link[0][0].config(**link_prop)
-	link[0][1].config(**{'bw': out_bw if out_bw != -1 else in_bw, 'max_queue_size': bdp if out_bw == -1 else _calculate_bdp(out_bw, RTT), 'delay': '%sms' % (RTT / 2)})
-
-	# for e in [ep1, ep2]:
-	# 	intf = e.intf()
-	# 	intf.config(bw=in_bw, max_queue_size=bdp, delay='%sms' % (RTT / 2), smooth_change=True)
-
-
-'''
-	link_prop = {'bw': in_bw, 'max_queue_size': bdp, 'delay': '%sms' % (RTT / 2)}
-	if loss:
-		link_prop['loss'] = loss
-	link[0][0].config(**link_prop)
-	link[0][1].config(**{'bw': out_bw if out_bw != -1 else in_bw, 'max_queue_size': bdp if out_bw == -1 else _calculate_bdp(out_bw, RTT), 'delay': '%sms' % (RTT / 2)})
-'''
->>>>>>> a9372edbb3dfe4111f74871548acc94fac388bd2
 
 def config_bw(conf_file, ep1, ep2, logger, ignore_link_loss):
 	delta_time = 0
