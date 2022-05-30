@@ -14,6 +14,8 @@ LOGS = $(foreach link, ${LINKS}, $(foreach alg, ${ALGS}, $(foreach run_instance,
 
 TEST_ALGS = newcwv vreno
 
+CLIENTS = 1 2 3 5
+
 TEST_LOGS = $(foreach link, ${LINKS}, $(foreach alg, ${TEST_ALGS}, $(foreach run_instance, $(shell seq 1 10), ${ROOT}/logs/newcwv/test2/${link}/${run_instance}_${alg}/nginx_access.log)))
 
 CLIENTS = 1 2 3 5
@@ -262,28 +264,34 @@ PAPER_BUILD = doc/paper
 
 FIGURES_FOLDER = ${PAPER_BUILD}/figures
 
+.PRECIOUS: ${FIGURES_FOLDER}/tmp/%/parsed_data.json
+
+RAW_DATA = ${foreach client, ${CLIENTS}, ${FIGURES_FOLDER}/tmp/${client}/parsed_data.json}
+
 # Tools to build before the PDF files. This is a list of executable files in
 # the bin/ directory:
 TOOLS = 
 
-FIGURES = ${FIGURES_FOLDER}/Average_Bitrate_5_clients.pdf
+FIGURES_TRANSPORT = $(foreach client, ${CLIENTS},  ${FIGURES_FOLDER}/Throughput_${client}_clients.pdf)
+
+FIGURES_APPLICATION = ${FIGURES_FOLDER}/Average_Bitrate.pdf ${FIGURES_FOLDER}/Average_Oscillations.pdf ${FIGURES_FOLDER}/Rebuffer_Ratio.pdf
 
 #TODO: Logs as a dependency here
-${FIGURES_FOLDER}/tmp/parsed_data.json: ${ROOT}/scripts/analytics/paper/plot_data.py
-	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --root /vagrant/logs/clients/5 --algs newcwv vreno --runs ${shell seq 1 10} --links ${LINKS} --parse 1 --target none
+${FIGURES_FOLDER}/tmp/%/parsed_data.json: ${ROOT}/scripts/analytics/paper/plot_data.py
+	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --root /vagrant/logs/clients/$* --algs newcwv vreno --runs ${shell seq 1 10} --links ${LINKS} --parse 1 --target none
 
 #TODO need to fix parsed data dependency to allow for more clients
-${FIGURES_FOLDER}/Average_Bitrate_5_clients.pdf: ${FIGURES_FOLDER}/tmp/parsed_data.json
-	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --algs newcwv vreno --links ${LINKS} --target "average bitrate" --extension pdf
+${FIGURES_FOLDER}/Average_Bitrate.pdf: ${RAW_DATA}
+	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --algs newcwv vreno --links ${LINKS} --target "average bitrate" --clients_combined ${CLIENTS} --extension pdf
 
-${FIGURES_FOLDER}/Average_Oscillations_5_clients.pdf: ${FIGURES_FOLDER}/tmp/parsed_data.json
-	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --algs newcwv vreno --links ${LINKS} --target "average oscillations" --extension pdf
+${FIGURES_FOLDER}/Average_Oscillations.pdf: ${RAW_DATA}
+	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --algs newcwv vreno --links ${LINKS} --target "average oscillations" --clients_combined ${CLIENTS} --extension pdf
 
-${FIGURES_FOLDER}/Throughput_Precise_5_clients.pdf: ${FIGURES_FOLDER}/tmp/parsed_data.json
-	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --algs newcwv vreno --links ${LINKS} --target "throughput precise" --extension pdf
+${FIGURES_FOLDER}/Rebuffer_Ratio.pdf: ${RAW_DATA}
+	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --algs newcwv vreno --links ${LINKS} --target "rebuffer ratio" --clients_combined ${CLIENTS} --extension pdf
 
-${FIGURES_FOLDER}/Throughput_Safe_5_clients.pdf: ${FIGURES_FOLDER}/tmp/parsed_data.json
-	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --algs newcwv vreno --links ${LINKS} --target "throughput safe" --extension pdf
+${FIGURES_FOLDER}/Throughput_%_clients.pdf: ${FIGURES_FOLDER}/tmp/%/parsed_data.json
+	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --algs newcwv vreno --links ${LINKS} --target "throughput" --clients_combined ${CLIENTS} --clients $* --extension pdf
 
 ${FIGURES_FOLDER}/Average_Stalls_5_clients.pdf: ${FIGURES_FOLDER}/tmp/parsed_data.json
 	/usr/bin/python3 /vagrant/scripts/analytics/paper/plot_data.py --algs newcwv vreno --links ${LINKS} --target "average stalls" --extension png
@@ -296,7 +304,7 @@ ${FIGURES_FOLDER}/Average_Stalls_5_clients.pdf: ${FIGURES_FOLDER}/tmp/parsed_dat
 # ${FIGURES}: figures
 
 # Master build rule:
-paper: check-make git-revision $(TOOLS) $(PDF_FILES)
+paper: ${FIGURES_APPLICATION} ${FIGURES_TRANSPORT} check-make git-revision $(TOOLS) $(PDF_FILES)
 
 # =================================================================================================
 # Project specific rules to download files:
@@ -399,6 +407,17 @@ $(call xargs,sh $(PAPER_BUILD)/bin/latex-build.sh --clean,$(1))
 endef
 
 clean:
+	$(call remove,$(PAPER_BUILD)/git-revision)
+	$(call remove,$(PAPER_BUILD)/$(DOWNLOADS))
+ifneq ($(strip $(TOOLS)),)
+	$(call remove,$(PAPER_BUILD)/$(TOOLS))
+endif
+	$(foreach tool,$(TOOLS),rm -rf $(PAPER_BUILD)/$(tool).dSYM)
+	@$(call remove-latex,$(PDF_FILES:%.pdf=%.tex))
+	rm -f $(PAPER_BUILD)/papers/paper_*.pdf
+	rm -f $(PAPER_BUILD)/papers/paper.synctex.gz
+
+full_clean:
 	$(call remove,$(PAPER_BUILD)/git-revision)
 	$(call remove,$(PAPER_BUILD)/$(DOWNLOADS))
 ifneq ($(strip $(TOOLS)),)
